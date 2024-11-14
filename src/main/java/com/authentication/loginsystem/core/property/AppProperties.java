@@ -4,17 +4,33 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
-import org.springframework.validation.annotation.Validated;
 
 @Component
 @Getter
 @Setter
-@Validated
 @ConfigurationProperties("loginsystem.auth")
 public class AppProperties {
 
-    @NotBlank
-    private String providerUrl;
+    private Security security;
+
+    @Getter
+    @Setter
+    public static class Security {
+
+        @NotBlank
+        private String providerUrl;
+
+        @NotBlank
+        private String keypairAlias;
+
+        @NotBlank
+        private Resource jksResource;
+
+        @NotBlank
+        private String password;
+
+    }
 
 }
