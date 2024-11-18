@@ -12,23 +12,26 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcOperations;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
-import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
+import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat;
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.security.KeyStore;
 import java.time.Duration;
+import java.util.Arrays;
 
 @Configuration
 @RequiredArgsConstructor
@@ -41,7 +44,7 @@ public class AuthorizationServerConfig {
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authFilterChain(HttpSecurity http) throws Exception {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-        return http.build();
+        return http.formLogin(Customizer.withDefaults()).build();
     }
 
     @Bean
@@ -52,8 +55,8 @@ public class AuthorizationServerConfig {
     }
 
     @Bean
-    public RegisteredClientRepository registeredClientRepository() {
-        RegisteredClient cliente1 = RegisteredClient
+    public RegisteredClientRepository registeredClientRepository(JdbcOperations jdbcOperations) {
+        RegisteredClient usuario1 = RegisteredClient
                 .withId("1")
                 .clientId("usuario-1")
                 .clientSecret(encoder.encode("123"))
@@ -66,7 +69,47 @@ public class AuthorizationServerConfig {
                         .build())
                 .build();
 
-        return new InMemoryRegisteredClientRepository(cliente1);
+        RegisteredClient usuario2 = RegisteredClient
+                .withId("2")
+                .clientId("usuario-2")
+                .clientSecret(encoder.encode("123"))
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .scopes(scopes -> scopes.addAll(Arrays.asList("READ", "WRITE")))
+                .tokenSettings(
+                        TokenSettings.builder()
+                                .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
+                                .accessTokenTimeToLive(Duration.ofMinutes(10))
+                                .build()
+                )
+                .redirectUri("http://127.0.0.1:8080/authorized")
+                .clientSettings(
+                        ClientSettings.builder()
+                                .requireAuthorizationConsent(true)
+                                .build()
+                ).build();
+
+        RegisteredClient usuario3 = RegisteredClient
+                .withId("3")
+                .clientId("usuario-3")
+                .clientSecret(encoder.encode("123"))
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .scopes(scopes -> scopes.addAll(Arrays.asList("READ", "WRITE")))
+                .tokenSettings(
+                        TokenSettings.builder()
+                                .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
+                                .accessTokenTimeToLive(Duration.ofMinutes(10))
+                                .build()
+                )
+                .redirectUri("http://127.0.0.1:8080/authorized")
+                .clientSettings(
+                        ClientSettings.builder()
+                                .requireAuthorizationConsent(false)
+                                .build()
+                ).build();
+
+        return new JdbcRegisteredClientRepository(jdbcOperations);
     }
 
     @Bean
