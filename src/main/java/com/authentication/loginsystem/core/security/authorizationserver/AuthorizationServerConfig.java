@@ -19,6 +19,7 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -75,11 +76,15 @@ public class AuthorizationServerConfig {
                 .clientSecret(encoder.encode("123"))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .scopes(scopes -> scopes.addAll(Arrays.asList("READ", "WRITE")))
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .scope("WRITE")
+                .scope("READ")
                 .tokenSettings(
                         TokenSettings.builder()
                                 .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
                                 .accessTokenTimeToLive(Duration.ofMinutes(10))
+                                .reuseRefreshTokens(false)
+                                .refreshTokenTimeToLive(Duration.ofDays(1))
                                 .build()
                 )
                 .redirectUri("http://127.0.0.1:8080/authorized")
@@ -95,11 +100,15 @@ public class AuthorizationServerConfig {
                 .clientSecret(encoder.encode("123"))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .scopes(scopes -> scopes.addAll(Arrays.asList("READ", "WRITE")))
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .scope("WRITE")
+                .scope("READ")
                 .tokenSettings(
                         TokenSettings.builder()
                                 .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
                                 .accessTokenTimeToLive(Duration.ofMinutes(10))
+                                .reuseRefreshTokens(false)
+                                .refreshTokenTimeToLive(Duration.ofDays(1))
                                 .build()
                 )
                 .redirectUri("http://127.0.0.1:8080/authorized")
