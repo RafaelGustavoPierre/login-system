@@ -16,7 +16,8 @@ public class ResourceServerConfig {
     @Bean
     public SecurityFilterChain resourceFilterChain(HttpSecurity http) throws Exception {
         http.formLogin(Customizer.withDefaults());
-        return http.build();
+
+        return http.formLogin(customizer -> customizer.loginPage("/login")).build();
     }
 
 }
