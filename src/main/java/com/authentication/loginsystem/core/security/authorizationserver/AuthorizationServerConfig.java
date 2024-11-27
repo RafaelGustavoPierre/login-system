@@ -22,13 +22,13 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
-import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
-import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.*;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
+import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat;
@@ -36,6 +36,7 @@ import org.springframework.security.oauth2.server.authorization.settings.TokenSe
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import java.security.KeyStore;
 import java.time.Duration;
@@ -52,7 +53,18 @@ public class AuthorizationServerConfig {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authFilterChain(HttpSecurity http) throws Exception {
-        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+        OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = new OAuth2AuthorizationServerConfigurer();
+        authorizationServerConfigurer.authorizationEndpoint(customizer -> customizer.consentPage("/oauth2/consent"));
+        RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
+
+        http.securityMatcher(endpointsMatcher)
+                .authorizeHttpRequests(authorizeRequests ->
+                        authorizeRequests.anyRequest().authenticated()
+                )
+                .csrf(csrf -> csrf.ignoringRequestMatchers(endpointsMatcher));
+
+        http.with(authorizationServerConfigurer, Customizer.withDefaults());
+
         return http.formLogin(customizer -> customizer.loginPage("/login")).build();
     }
 
@@ -68,6 +80,7 @@ public class AuthorizationServerConfig {
         RegisteredClient usuario1 = RegisteredClient
                 .withId("1")
                 .clientId("usuario-1")
+                .clientName("Usuario 1")
                 .clientSecret(encoder.encode("123"))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
@@ -81,6 +94,7 @@ public class AuthorizationServerConfig {
         RegisteredClient usuario2 = RegisteredClient
                 .withId("2")
                 .clientId("usuario-2")
+                .clientName("Usuario 2")
                 .clientSecret(encoder.encode("123"))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
@@ -105,6 +119,7 @@ public class AuthorizationServerConfig {
         RegisteredClient usuario3 = RegisteredClient
                 .withId("3")
                 .clientId("usuario-3")
+                .clientName("Usuario 3")
                 .clientSecret(encoder.encode("123"))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
@@ -122,7 +137,7 @@ public class AuthorizationServerConfig {
                 .redirectUri("http://127.0.0.1:8080/authorized")
                 .clientSettings(
                         ClientSettings.builder()
-                                .requireAuthorizationConsent(false)
+                                .requireAuthorizationConsent(true)
                                 .build()
                 ).build();
 
@@ -170,6 +185,16 @@ public class AuthorizationServerConfig {
                 context.getClaims().claim("name", userByEmail.getName());
             }
         };
+    }
+
+    @Bean
+    public OAuth2AuthorizationConsentService consentService(JdbcOperations jdbcOperations, RegisteredClientRepository repository) {
+        return new JdbcOAuth2AuthorizationConsentService(jdbcOperations, repository);
+    }
+
+    @Bean
+    public OAuth2AuthorizationQueryService oAuth2AuthorizationQueryService(JdbcOperations jdbcOperations) {
+        return new JdbcOAuth2AuthorizationQueryService(jdbcOperations);
     }
 
 }
